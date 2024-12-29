@@ -11,5 +11,20 @@ pipeline {
                 '''
             }
         }
+        stage('Check Logs for Errors') {
+            steps {
+                script {
+                    def errorLogs = sh(
+                        script: "sudo grep -E ' 4[0-9]{2} | 5[0-9]{2} ' /var/log/apache2/access.log",
+                        returnStdout: true
+                    )
+                    if (errorLogs) {
+                        echo "Errors Found in Logs: \\n${errorLogs}"
+                    } else {
+                        echo "No 4xx or 5xx errors found in logs."
+                    }
+                }
+            }
+        }
     }
 }
