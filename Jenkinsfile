@@ -14,17 +14,43 @@ pipeline {
         stage('Check Logs for Errors') {
             steps {
                 script {
-                    def errorLogs = sh(
-                        script: "sudo grep -E ' 4[0-9]{2} | 5[0-9]{2} ' /var/log/apache2/access.log",
+                    // Перевірка, чи існує файл логів
+                    def logExists = sh(
+                        script: "test -f /var/log/apache2/access.log && echo 'exists' || echo 'not found'",
                         returnStdout: true
-                    )
-                    if (errorLogs) {
-                        echo "Errors Found in Logs: \\n${errorLogs}"
+                    ).trim()
+
+                    if (logExists == 'exists') {
+                        // Читання логів та пошук помилок
+                        def errorLogs = sh(
+                            script: "sudo grep -E ' 4[0-9]{2} | 5[0-9]{2} ' /var/log/apache2/access.log || true",
+                            returnStdout: true
+                        ).trim()
+
+                        if (errorLogs) {
+                            echo "Errors Found in Logs: \\n${errorLogs}"
+                        } else {
+                            echo "No 4xx or 5xx errors found in logs."
+                        }
                     } else {
-                        echo "No 4xx or 5xx errors found in logs."
+                        echo "Log file not found. Skipping error check."
                     }
                 }
             }
+        }
+        stage('Deploy') {
+            steps {
+                echo 'Deployment step executed'
+                sh '''
+                # Тестовий запит до Apache2, щоб згенерувати логи
+                curl -I http://localhost
+                '''
+            }
+        }
+    }
+    post {
+        always {
+            echo 'Pipeline execution complete.'
         }
     }
 }
